@@ -344,7 +344,7 @@ impl<'h> DoubleEndedIterator for Memchr<'h> {
         // SAFETY: All of our implementations of memchr ensure that any
         // pointers returns will fall within the start and end bounds, and this
         // upholds the safety contract of `self.it.next_back`.
-        unsafe { self.it.next_back(|s, e| memrchr_raw(self.needle1, s, e)) }
+        unsafe { self.it.next_back(|s, e| memchr_raw(self.needle1, s, e)) }
     }
 }
 
