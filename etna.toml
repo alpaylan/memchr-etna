@@ -1,0 +1,45 @@
+# ETNA workload index for memchr.
+#
+# One [[variant]] per injected mutation. Source of truth for variant -> property
+# mapping. Every other fact is derivable from the source tree:
+#   - ls patches/*.patch                       (patch-based variants)
+#   - grep -rn "pub fn property_" src/etna.rs  (property functions)
+#   - grep -rn "fn witness_.*_case_" tests/    (witness tests)
+#
+# Base commit for this workload is HEAD of master on this tree. Every
+# etna/<variant> branch is master + exactly one patch applied on top.
+#
+# Candidate 4ee2398 ("fallback: fix unaligned read") was skipped: its fix
+# targeted the old fallback scanner that was deleted in commit 3120980
+# ("memchr: rewrite everything"). The post-rewrite code uses a different
+# primitive (Fallback1::new) with no matching surface, so the mutation
+# is not expressible against the current codebase.
+
+name = "memchr"
+language = "Rust"
+
+[[variant]]
+name = "memchr_iter_offbyone_8313aeb_1"
+property = "MemchrIterMatchesNaive"
+injection = "patch"
+patch = "patches/memchr_iter_offbyone_8313aeb_1.patch"
+source_commit = "8313aebad08af00dbd7090114f2a70a1842b6f45"
+witnesses = [
+    "witness_memchr_iter_matches_naive_case_multi_hit",
+    "witness_memchr_iter_matches_naive_case_single_hit",
+]
+frameworks = ["proptest", "quickcheck", "crabcheck", "hegel"]
+files = ["src/memchr.rs"]
+
+[[variant]]
+name = "memrchr_iter_forward_1b37466_1"
+property = "MemrchrIterMatchesNaive"
+injection = "patch"
+patch = "patches/memrchr_iter_forward_1b37466_1.patch"
+source_commit = "1b37466ed6f79fcc40692beccfd16b199830b147"
+witnesses = [
+    "witness_memrchr_iter_matches_naive_case_multi_hit",
+    "witness_memrchr_iter_matches_naive_case_two_separated",
+]
+frameworks = ["proptest", "quickcheck", "crabcheck", "hegel"]
+files = ["src/memchr.rs"]
