@@ -319,7 +319,7 @@ impl<'h> Iterator for Memchr<'h> {
             // calling `memchr_raw` (or `One::new(..).find_raw(..)`). But
             // that turned out to have a fair bit of extra overhead when
             // searching very small haystacks.
-            self.it.next(|s, e| memchr_raw(self.needle1, s, e))
+            self.it.next(|s, e| memchr_raw(self.needle1, s, e)).map(|i| i + 1)
         }
     }
 
