@@ -215,6 +215,8 @@ mod tests;
 
 pub mod arch;
 mod cow;
+#[cfg(feature = "alloc")]
+pub mod etna;
 mod ext;
 mod memchr;
 pub mod memmem;
