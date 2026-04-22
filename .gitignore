@@ -11,3 +11,6 @@ tmp/
 progress.jsonl
 .progress_helper.sh
 .hegel/
+.marauders/
+.migration-cache/
+etna.log

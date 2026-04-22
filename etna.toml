@@ -1,45 +1,60 @@
-# ETNA workload index for memchr.
-#
-# One [[variant]] per injected mutation. Source of truth for variant -> property
-# mapping. Every other fact is derivable from the source tree:
-#   - ls patches/*.patch                       (patch-based variants)
-#   - grep -rn "pub fn property_" src/etna.rs  (property functions)
-#   - grep -rn "fn witness_.*_case_" tests/    (witness tests)
-#
-# Base commit for this workload is HEAD of master on this tree. Every
-# etna/<variant> branch is master + exactly one patch applied on top.
-#
-# Candidate 4ee2398 ("fallback: fix unaligned read") was skipped: its fix
-# targeted the old fallback scanner that was deleted in commit 3120980
-# ("memchr: rewrite everything"). The post-rewrite code uses a different
-# primitive (Fallback1::new) with no matching surface, so the mutation
-# is not expressible against the current codebase.
-
 name = "memchr"
-language = "Rust"
+language = "rust"
+crate = "memchr"
+base_commit = "471d328ef11d16a433d6c9624db07cf3c7874564"
 
-[[variant]]
-name = "memchr_iter_offbyone_8313aeb_1"
-property = "MemchrIterMatchesNaive"
-injection = "patch"
+[[tasks]]
+mutations = ["memchr_iter_offbyone_8313aeb_1"]
+
+[tasks.source]
+repo = "https://github.com/BurntSushi/memchr"
+commits = ["8313aebad08af00dbd7090114f2a70a1842b6f45"]
+commit_subjects = ["Fix Memchr iterators to use 0-based positions"]
+summary = "`Memchr::next` post-shifted every match index by `+1`, so `memchr_iter(needle, haystack)` reported positions one ahead of their true offsets. The fix removes the shift so iterator positions match the naive byte scan."
+
+[tasks.injection]
+kind = "patch"
+files = ["src/memchr.rs"]
+locations = [{ file = "src/memchr.rs" }]
 patch = "patches/memchr_iter_offbyone_8313aeb_1.patch"
-source_commit = "8313aebad08af00dbd7090114f2a70a1842b6f45"
-witnesses = [
-    "witness_memchr_iter_matches_naive_case_multi_hit",
-    "witness_memchr_iter_matches_naive_case_single_hit",
-]
-frameworks = ["proptest", "quickcheck", "crabcheck", "hegel"]
-files = ["src/memchr.rs"]
 
-[[variant]]
-name = "memrchr_iter_forward_1b37466_1"
-property = "MemrchrIterMatchesNaive"
-injection = "patch"
-patch = "patches/memrchr_iter_forward_1b37466_1.patch"
-source_commit = "1b37466ed6f79fcc40692beccfd16b199830b147"
+[tasks.bug]
+short_name = "memchr_iter_offbyone"
+invariant = "The positions yielded by `memchr_iter(needle, haystack)` match the indices yielded by the naive `haystack.iter().enumerate().filter(|(_, b)| **b == needle).map(|(i, _)| i)` scan, in order."
+how_triggered = "The buggy forward iterator post-shifts every output via `.map(|i| i + 1)`, so every hit is reported at `index + 1` instead of `index`. A haystack with a match at index 0 gets reported at 1; off-by-one is detected on the very first yielded position."
+
+[[tasks.tasks]]
+property = "MemchrIterMatchesNaive"
 witnesses = [
-    "witness_memrchr_iter_matches_naive_case_multi_hit",
-    "witness_memrchr_iter_matches_naive_case_two_separated",
+  { test_fn = "witness_memchr_iter_matches_naive_case_multi_hit" },
+  { test_fn = "witness_memchr_iter_matches_naive_case_single_hit" },
 ]
-frameworks = ["proptest", "quickcheck", "crabcheck", "hegel"]
+
+[[tasks]]
+mutations = ["memrchr_iter_forward_1b37466_1"]
+
+[tasks.source]
+repo = "https://github.com/BurntSushi/memchr"
+commits = ["1b37466ed6f79fcc40692beccfd16b199830b147"]
+commit_subjects = ["Modify DoubleEndedIterator to use rposition instead of just position"]
+summary = "`Memchr::next_back` dispatched the reverse scan through `memchr_raw`, so it returned the leftmost match each time instead of the rightmost. The fix routes `next_back` through `memrchr_raw` so the `DoubleEndedIterator` yields match positions from the end of the haystack."
+
+[tasks.injection]
+kind = "patch"
 files = ["src/memchr.rs"]
+locations = [{ file = "src/memchr.rs" }]
+patch = "patches/memrchr_iter_forward_1b37466_1.patch"
+
+[tasks.bug]
+short_name = "memrchr_iter_forward"
+invariant = "`memrchr_iter(needle, haystack).collect::<Vec<_>>()` equals the reverse of `memchr_iter(needle, haystack).collect::<Vec<_>>()` (i.e. the reverse iterator yields match positions from the end of the haystack)."
+how_triggered = """
+The buggy `next_back` dispatches the reverse scan through `memchr_raw` instead of `memrchr_raw`, so it returns the *first* (leftmost) match every time it's called. The first `.next_back()` of `b"aabaabaab"` searching for `b` yields 2 (leftmost hit) instead of 8 (rightmost hit).
+"""
+
+[[tasks.tasks]]
+property = "MemrchrIterMatchesNaive"
+witnesses = [
+  { test_fn = "witness_memrchr_iter_matches_naive_case_multi_hit" },
+  { test_fn = "witness_memrchr_iter_matches_naive_case_two_separated" },
+]
