@@ -1,5 +1,6 @@
 name = "memchr"
 language = "rust"
+strategies = ["proptest", "quickcheck", "crabcheck", "hegel"]
 crate = "memchr"
 base_commit = "471d328ef11d16a433d6c9624db07cf3c7874564"
 
